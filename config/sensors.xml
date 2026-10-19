@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Artery's reference radars = ETSI TR 103 562 V2.1.1 Table 4, configuration 1. Ranges in omnetpp.ini -->
+<sensors>
+    <sensor name="FrontShortRangeRadar" type="artery.envmod.sensor.FrontRadar" />
+    <sensor name="FrontLongRangeRadar"  type="artery.envmod.sensor.FrontRadar" />
+    <sensor name="RearShortRangeRadar"  type="artery.envmod.sensor.RearRadar" />
+    <sensor name="RearLongRangeRadar"   type="artery.envmod.sensor.RearRadar" />
+</sensors>

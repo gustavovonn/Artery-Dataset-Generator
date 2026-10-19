@@ -66,3 +66,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Dataset outputs
+data/
+__pycache__/
+*.cmdenv-log*

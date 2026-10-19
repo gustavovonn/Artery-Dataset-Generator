@@ -1,0 +1,30 @@
+# Subset built offline from a ground-truth run:
+
+input = "data/groundtruth/lust-run0"
+output = "data/subsets/lust-run0-veremi"
+seed = 1
+
+# VeReMi Extension (Kamel et al., ICC 2020)
+# Applied to every CAM and to the CPM author pose (reference position, orientation).
+[sensor_errors]
+position = true
+speed = true
+acceleration = true
+heading = true
+
+# VeReMi Extension Sec. IV-C malfunctions, CAM only; magnitudes from F2MD F2MDParameters.h.
+# One type per subset as the VeReMi Extension subsets; with several, faulty vehicles
+# get one type each, round-robin over `types` (F2MD MixLocalAttacks).
+[faults]
+attacker_rate = 0.3   # VeReMi Extension
+start_time = 10.0     # F2MD START_ATTACK [s]; messages before it stay genuine
+types = [
+    "ConstPos", "ConstPosOffset", "RandomPos", "RandomPosOffset",
+    "ConstSpeed", "ConstSpeedOffset", "RandomSpeed", "RandomSpeedOffset",
+]
+
+[faults.params]
+par_var = 0.55        # parVar
+pos_offset = 70.0     # RandomPosOffsetX/Y [m]
+speed = 40.0          # RandomSpeedX/Y [m/s]
+speed_offset = 7.0    # RandomSpeedOffsetX/Y [m/s]

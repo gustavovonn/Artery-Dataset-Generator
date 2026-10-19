@@ -1,3 +1,6 @@
 [submodule "artery"]
 	path = artery
 	url = https://github.com/gustavovonn/artery.git
+[submodule "libs/v2x-misc"]
+	path = libs/v2x-misc
+	url = https://github.com/gustavovonn/v2x-misc.git

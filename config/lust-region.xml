@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!--
+  Region of interest in SUMO coordinates; provisional, area still to be selected.
+  Vehicles exist in the simulation only while inside it.
+-->
+<regions>
+  <polygon>
+    <point x="7550.00" y="6300.00"/>
+    <point x="8818.86" y="6300.00"/>
+    <point x="8818.86" y="7568.86"/>
+    <point x="7550.00" y="7568.86"/>
+  </polygon>
+</regions>
