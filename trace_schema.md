@@ -2,7 +2,7 @@
 
 A ground-truth run lives in `data/groundtruth/<config>-run<n>/`. Everything persisted is ground truth: message content as it goes on the wire with zero sensor error, plus simulator truth marked **oracle**. Sensor errors and faults are applied offline (`scripts/inject_faults.py`), producing `data/subsets/<name>/` with the same files.
 
-All files are JSON Lines, one object per line, written in simulation-time order. Times are seconds since `sink.startTime`, the end of the warm-up (07:00 for `lust`). Unavailable values are `null`.
+All files are JSON Lines, one object per line, written in simulation-time order. Times are seconds since `sink.startTime`, the end of the warm-up (06:30 for the preliminary `lust` run, which has none). Unavailable values are `null`.
 
 | File | One row per |
 |---|---|

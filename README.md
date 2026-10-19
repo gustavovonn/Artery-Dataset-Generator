@@ -21,7 +21,7 @@ scripts/setup_docker.sh                          # container "artery-dataset", r
 scripts/build.sh
 ```
 
-`[Config lust]` starts SUMO at 06:30 (`--begin 23400`) and records from `sink.startTime = 1800s`, i.e. 07:00–09:00.
+`[Config lust]` is the preliminary-results run: SUMO starts at 06:30 (`--begin 23400`) and 120 s are recorded from the start, without warm-up.
 
 ## Run
 
@@ -43,7 +43,7 @@ Implemented, offline: VeReMi Extension sensor error models (position, speed, acc
 
 | Parameter | Value | Reference |
 |---|---|---|
-| Window | 07:00–09:00 | VeReMi Extension, Table I |
+| Window | 120 s from 06:30 (preliminary results) | — |
 | Region | provisional square, `config/lust-region.xml` | to be selected |
 | TX power / sensitivity | 20 mW / −89 dBm | F2MD LuST configuration (VeReMi Extension) |
 | Propagation | GEMV² | Boban et al., IEEE TVT 2014; Artery `scenarios/gemv2` |
