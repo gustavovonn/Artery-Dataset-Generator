@@ -11,6 +11,15 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     docker build -t "$IMAGE" -f "$DOCKERFILE" "$WORKSPACE"
 fi
 
+# a container created from another checkout keeps mounting that path: recreate it
+if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+    MOUNTED=$(docker inspect "$CONTAINER" --format '{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Source}}{{end}}{{end}}')
+    if [ "$MOUNTED" != "$WORKSPACE" ]; then
+        echo "container $CONTAINER mounts $MOUNTED, recreating it for $WORKSPACE"
+        docker rm -f "$CONTAINER" >/dev/null
+    fi
+fi
+
 if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; then
     docker start "$CONTAINER" >/dev/null
 else
