@@ -1,18 +1,21 @@
 # Subset built offline from a ground-truth run:
 
-input = "data/groundtruth/lust-run0"
-output = "data/subsets/lust-run0-veremi"
+input = "data/groundtruth/lust-full-run0"
+output = "data/subsets/lust-full-run0-veremi"
 seed = 1
 
 # VeReMi Extension (Kamel et al., ICC 2020)
-# Applied to every CAM and to the CPM author pose (reference position, orientation).
+# Applied to every CAM and to the CPM author pose (reference position, orientation);
+# a CAM and a CPM of the same instant share one GNSS fix.
 [sensor_errors]
 position = true
 speed = true
 acceleration = true
 heading = true
 
-# VeReMi Extension Sec. IV-C malfunctions, CAM only; magnitudes from F2MD F2MDParameters.h.
+# VeReMi Extension Sec. IV-C malfunctions; magnitudes from F2MD F2MDParameters.h.
+# Position malfunctions also move the CPM reference position, and with it every reported object;
+# the CPM has no author speed, so speed malfunctions reach CAMs only.
 # One type per subset as the VeReMi Extension subsets; with several, faulty vehicles
 # get one type each, round-robin over `types` (F2MD MixLocalAttacks).
 [faults]

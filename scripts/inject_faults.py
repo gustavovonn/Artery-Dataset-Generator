@@ -19,6 +19,7 @@ ATTACK_IDS = {
     "Genuine": 0, "ConstPos": 1, "ConstPosOffset": 2, "RandomPos": 3, "RandomPosOffset": 4,
     "ConstSpeed": 5, "ConstSpeedOffset": 6, "RandomSpeed": 7, "RandomSpeedOffset": 8,
 }
+POSITION_FAULTS = ("ConstPos", "ConstPosOffset", "RandomPos", "RandomPosOffset")
 
 
 def read_jsonl(path):
@@ -55,13 +56,17 @@ class SensorError:
         self.e0_heading = rng.uniform(-20.0, 20.0)
         self.last_speed_error = None
         self.last_time = None
+        self.fix_time = None  # instant of e_pos
         self.speed = 0.0  # latest true speed, for CPMs
 
-    def position(self):
+    def position(self, time):
+        """One GNSS fix per instant: a CAM and a CPM of the same instant share its error."""
         if not self.cfg.get("position", True):
             return 0.0, 0.0
-        self.e_pos = tuple(
-            self.rng.gauss((e0 + e) / 2.0, abs(0.03 * e0)) for e0, e in zip(self.e0_pos, self.e_pos))
+        if time != self.fix_time:
+            self.e_pos = tuple(
+                self.rng.gauss((e0 + e) / 2.0, abs(0.03 * e0)) for e0, e in zip(self.e0_pos, self.e_pos))
+            self.fix_time = time
         return self.e_pos
 
     def heading(self):
@@ -72,7 +77,7 @@ class SensorError:
     def apply(self, msg, kind):
         if kind == "cam" and msg.get("speed") is not None:
             self.speed = msg["speed"]
-        east, north = self.position()
+        east, north = self.position(msg["refSimTime"])
         if msg.get("lat") is not None and msg.get("lon") is not None:
             msg["lat"], msg["lon"] = shift(msg["lat"], msg["lon"], east, north)
         if msg.get("heading") is not None:
@@ -90,7 +95,10 @@ class SensorError:
 
 
 class Fault:
-    """VeReMi Extension Sec. IV-C malfunctions as implemented in F2MD MDAttack.cc; CAM only."""
+    """VeReMi Extension Sec. IV-C malfunctions as implemented in F2MD MDAttack.cc.
+
+    A CPM carries the author's reference position but not its speed, so only position malfunctions
+    reach it, moving every object reported relative to that position."""
 
     def __init__(self, kind, rng, params, bounds):
         self.kind = kind
@@ -103,28 +111,51 @@ class Fault:
         self.const_pos_offset = tuple(rng.uniform(lo * params["pos_offset"], hi * params["pos_offset"]) for _ in range(2))
         self.const_speed = tuple(rng.uniform(0.0, params["speed"]) for _ in range(2))
         self.const_speed_offset = tuple(rng.uniform(lo * params["speed_offset"], hi * params["speed_offset"]) for _ in range(2))
+        self.fix = None  # (instant, lat, lon) of the latest faulty position
 
-    def apply(self, msg):
+    def apply(self, msg, kind):
         """Returns True when the message content was altered."""
-        if any(msg.get(f) is None for f in ("lat", "lon", "heading", "speed")):
+        if kind == "cpm":
+            if self.kind not in POSITION_FAULTS or msg.get("lat") is None or msg.get("lon") is None:
+                return False
+        elif any(msg.get(f) is None for f in ("lat", "lon", "heading", "speed")):
             return False
+        if self.kind in POSITION_FAULTS:
+            msg["lat"], msg["lon"] = self.faulty_position(msg)
+        else:
+            self.apply_speed(msg)
+        return True
+
+    def faulty_position(self, msg):
+        """One faulty fix per instant: a CAM and a CPM of the same instant share it."""
+        time = msg["refSimTime"]
+        if self.fix is not None and self.fix[0] == time:
+            return self.fix[1], self.fix[2]
         k = self.kind
         p = self.p
         rng = self.rng
+        lat, lon = msg["lat"], msg["lon"]
         # F2MD coordinates: x east, y south
         if k == "ConstPos":
-            msg["lat"], msg["lon"] = self.const_pos
+            lat, lon = self.const_pos
         elif k == "ConstPosOffset":
             dx, dy = self.const_pos_offset
-            msg["lat"], msg["lon"] = shift(msg["lat"], msg["lon"], dx, -dy)
+            lat, lon = shift(lat, lon, dx, -dy)
         elif k == "RandomPos":
             b = self.bounds
-            msg["lat"], msg["lon"] = rng.uniform(b[0], b[1]), rng.uniform(b[2], b[3])
+            lat, lon = rng.uniform(b[0], b[1]), rng.uniform(b[2], b[3])
         elif k == "RandomPosOffset":
             dx = rng.uniform(0.0, p["pos_offset"]) - p["pos_offset"] / 2.0
             dy = rng.uniform(0.0, p["pos_offset"]) - p["pos_offset"] / 2.0
-            msg["lat"], msg["lon"] = shift(msg["lat"], msg["lon"], dx, -dy)
-        elif k == "ConstSpeed":
+            lat, lon = shift(lat, lon, dx, -dy)
+        self.fix = (time, lat, lon)
+        return lat, lon
+
+    def apply_speed(self, msg):
+        k = self.kind
+        p = self.p
+        rng = self.rng
+        if k == "ConstSpeed":
             msg["speed"] = math.hypot(*self.const_speed)
         elif k == "ConstSpeedOffset":
             ve, vn = velocity(msg["speed"], msg["heading"])
@@ -140,7 +171,6 @@ class Fault:
             msg["speed"] = math.hypot(ve + dx, vn - dy)
         else:
             raise ValueError(f"unsupported fault type {k}")
-        return True
 
 
 def bounds_of(cam_path):
@@ -205,12 +235,9 @@ def main(config_path):
                 if sender not in sensors:
                     sensors[sender] = SensorError(random.Random(rng.random()), sensor_cfg)
                 sensors[sender].apply(msg, kind)
-            if kind == "cpm":
-                write_jsonl(cpm_out, msg)
-                continue
             attack = 0
             fault = faults.get(sender)
-            if fault and msg["sendTime"] >= start and fault.apply(msg):
+            if fault and msg["sendTime"] >= start and fault.apply(msg, kind):
                 attack = ATTACK_IDS[fault.kind]
             msg["attackType"] = attack
             write_jsonl(cam_out, msg)

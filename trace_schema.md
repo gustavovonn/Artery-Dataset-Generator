@@ -2,7 +2,7 @@
 
 A ground-truth run lives in `data/groundtruth/<config>-run<n>/`. Everything persisted is ground truth: message content as it goes on the wire with zero sensor error, plus simulator truth marked **oracle**. Sensor errors and faults are applied offline (`scripts/inject_faults.py`), producing `data/subsets/<name>/` with the same files.
 
-All files are JSON Lines, one object per line, written in simulation-time order. Times are seconds since `sink.startTime`, the end of the warm-up (06:30 for the preliminary `lust` run, which has none). Unavailable values are `null`.
+All files are JSON Lines, one object per line, written in simulation-time order. Times are seconds since `sink.startTime`, the end of the warm-up (07:00 for the preliminary `lust-full` run, which has none). Unavailable values are `null`.
 
 | File | One row per |
 |---|---|
@@ -56,6 +56,8 @@ Decoded from the CPM as sent (ETSI TS 103 324 V2.1.1, Artery `CpService`) and **
 | `objects` | | Perceived Object Container, below |
 
 The author's speed is not in the CPM (TS 103 324 Originating Vehicle Container has none); take it from `cam_sent` or `vehicle_pose`.
+
+Subsets add `attackType`, as `cam_sent`. Only position malfunctions reach a CPM (its reference position, so every object moves with it); speed malfunctions leave it at `0`. A CAM and a CPM of the same instant (`refSimTime`) share one GNSS fix, for the sensor error and for the malfunction.
 
 ### `objects[]`
 
@@ -129,3 +131,9 @@ Subsets add `faultType`.
 ## `metadata.json`
 
 `schemaVersion`, `configName`, `runNumber`, `seedSet`, `warmup` (s), `duration` (s), `cpmConvention`, `rows` per file. Subsets add `injection` (source run, the full fault config, attack ids). Every simulation parameter is in `config/omnetpp.ini`.
+
+---
+
+## `receivers/<receiver>.jsonl` (derived)
+
+The reception join, one file per receiver as VeReMi's `traceJSON`, written by `scripts/receiver_view.py` from `reception`, `cam_sent` and `cpm_sent` of a ground-truth run or subset. One line per reception in `rcvTime` order: `receiver`, `rcvTime`, `messageID`, `msg`, then every field of the message as in `cam_sent` / `cpm_sent` (objects nested, `attackType` in subsets). Nothing is filtered: CPMs without objects or without a reference position stay; filtering belongs to each application. The message content is copied per receiver, so the view is about 2.4× the size of the three files it joins. Simulator truth stays in `vehicle_pose` and `vehicles`.
