@@ -240,7 +240,7 @@ def main(config_path):
             if fault and msg["sendTime"] >= start and fault.apply(msg, kind):
                 attack = ATTACK_IDS[fault.kind]
             msg["attackType"] = attack
-            write_jsonl(cam_out, msg)
+            write_jsonl(cpm_out if kind == "cpm" else cam_out, msg)
 
     for name in ("reception.jsonl", "vehicle_pose.jsonl"):
         target = os.path.join(dst, name)
